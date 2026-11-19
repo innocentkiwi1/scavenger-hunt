@@ -277,10 +277,15 @@
             </div>
           </div>
 
-          <button type="button" id="gps-toggle-btn" onclick="toggleGpsRadar()" class="ink-btn bg-mint text-ink px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1">
-            <i data-lucide="navigation" class="w-3.5 h-3.5"></i>
-            <span id="gps-toggle-label">Start Radar</span>
-          </button>
+          <div class="flex flex-col sm:flex-row gap-1.5">
+            <button type="button" id="gps-demo-btn" onclick="toggleGpsDemo()" class="ink-btn bg-sunny text-ink px-3 py-1.5 rounded-xl text-xs font-extrabold">
+              Try Demo
+            </button>
+            <button type="button" id="gps-toggle-btn" onclick="toggleGpsRadar()" class="ink-btn bg-mint text-ink px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1">
+              <i data-lucide="navigation" class="w-3.5 h-3.5"></i>
+              <span id="gps-toggle-label">Start Radar</span>
+            </button>
+          </div>
         </div>
 
         <div id="gps-live-panel" class="hidden bg-white rounded-xl border-2 border-ink p-3 space-y-2">
@@ -550,6 +555,8 @@
     let config = loadConfig();
     let state = loadState();
     let gpsWatchId = null;
+    let gpsDemoTimer = null;
+    let gpsDemoStep = 0;
     let lastKnownDistance = null;
     let qrScannerInstance = null;
     let qrScannerActive = false;
@@ -637,6 +644,7 @@
 
     function renderAll() {
       stopGpsTracking();
+      stopGpsDemo();
       stopQrScannerIfRunning();
 
       document.getElementById("hunt-title").textContent = config.huntTitle;
@@ -923,7 +931,53 @@
       if (gpsWatchId !== null) {
         stopGpsTracking();
       } else {
+        stopGpsDemo();
         startGpsTracking();
+      }
+    }
+
+    // Demo mode uses made-up distances. It does not request or use device location.
+    function toggleGpsDemo() {
+      if (gpsDemoTimer !== null) {
+        stopGpsDemo();
+        return;
+      }
+      if (gpsWatchId !== null) stopGpsTracking();
+
+      const stage = config.stages[state.currentStageIndex];
+      const targetLat = stage ? parseCoordinate(stage.targetLat, "lat") : null;
+      const targetLng = stage ? parseCoordinate(stage.targetLng, "lng") : null;
+      if (!stage || !stage.gpsEnabled || targetLat === null || targetLng === null) {
+        document.getElementById("gps-status-sub").textContent = "Enable GPS and add valid target coordinates in Edit first";
+        return;
+      }
+
+      document.getElementById("gps-live-panel").classList.remove("hidden");
+      document.getElementById("gps-status-sub").textContent = "DEMO MODE — simulated movement, not real GPS";
+      document.getElementById("gps-demo-btn").textContent = "Stop Demo";
+      gpsDemoStep = 0;
+      const demoDistances = [420, 330, 245, 175, 125, 88, 58, 34, 22, 12, 6, 14, 28, 52, 95, 155, 230, 320];
+      const showDemoDistance = () => {
+        const distance = demoDistances[gpsDemoStep % demoDistances.length];
+        gpsDemoStep++;
+        const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        document.getElementById("gps-updated-time").textContent = `Demo update ${nowStr}`;
+        updateRadarDisplay(distance, 3);
+      };
+      showDemoDistance();
+      gpsDemoTimer = window.setInterval(showDemoDistance, 1600);
+    }
+
+    function stopGpsDemo() {
+      if (gpsDemoTimer !== null) {
+        window.clearInterval(gpsDemoTimer);
+        gpsDemoTimer = null;
+      }
+      const button = document.getElementById("gps-demo-btn");
+      if (button) button.textContent = "Try Demo";
+      const status = document.getElementById("gps-status-sub");
+      if (status && status.textContent.startsWith("DEMO MODE")) {
+        status.textContent = "Demo stopped. Start Radar for real GPS.";
       }
     }
 
