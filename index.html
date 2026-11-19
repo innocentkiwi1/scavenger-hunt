@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Scavenger Hunt Adventure</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['Fredoka', 'sans-serif'],
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          },
+          colors: {
+            paper: '#FFFDF7',
+            ink: '#1E1B2E',
+            sunny: '#FFD43B',
+            coral: '#FF6B6B',
+            mint: '#51CF66',
+            sky: '#4DABF7',
+            lilac: '#B197FC',
+            tangerine: '#FF922B',
+          },
+          boxShadow: {
+            hard: '4px 4px 0px #1E1B2E',
+            hardSm: '2px 2px 0px #1E1B2E',
+            hardLg: '6px 6px 0px #1E1B2E',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body {
+      background-color: #FFF6E0;
+      background-image: radial-gradient(#E5D4B3 1.25px, transparent 1.25px);
+      background-size: 20px 20px;
+      color: #1E1B2E;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+    }
+
+    .font-display {
+      font-family: 'Fredoka', sans-serif;
+    }
+
+    .ink-card {
+      background-color: #FFFDF7;
+      border: 2.5px solid #1E1B2E;
+      border-radius: 22px;
+      box-shadow: 4px 4px 0px #1E1B2E;
+    }
+
+    .ink-btn {
+      border: 2.5px solid #1E1B2E;
+      box-shadow: 3px 3px 0px #1E1B2E;
+      transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s ease;
+    }
+
+    .ink-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 1px 1px 0px #1E1B2E;
+    }
+
+    .ink-input {
+      border: 2.5px solid #1E1B2E;
+      box-shadow: inset 2px 2px 0px rgba(30, 27, 46, 0.08);
+    }
+
+    .tape-strip {
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-2deg);
+      width: 84px;
+      height: 20px;
+      background-color: rgba(255, 212, 59, 0.85);
+      border: 1.5px solid #1E1B2E;
+      z-index: 10;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.92); opacity: 0; }
+      70% { transform: scale(1.03); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .pop-in {
+      animation: popIn 0.28s ease-out forwards;
+    }
+
+    @keyframes wiggle {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-6px); }
+      75% { transform: translateX(6px); }
+    }
+
+    .wiggle {
+      animation: wiggle 0.28s ease-in-out;
+    }
+
+    @keyframes radarPulse {
+      0% { transform: scale(0.75); opacity: 0.9; }
+      100% { transform: scale(1.65); opacity: 0; }
+    }
+
+    .radar-ring {
+      animation: radarPulse 1.8s infinite ease-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-4 px-3 sm:px-5">
+  <div id="app" class="w-full max-w-md mx-auto flex flex-col gap-4 pb-10">
+
+    <!-- Top Header & Creator Controls -->
+    <header class="ink-card p-3.5 relative">
+      <div class="tape-strip"></div>
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5 min-w-0">
+          <div class="w-10 h-10 rounded-2xl bg-sunny border-2 border-ink shadow-hardSm flex items-center justify-center shrink-0">
+            <i data-lucide="compass" class="w-5 h-5 text-ink"></i>
+          </div>
+          <div class="min-w-0">
+            <h1 id="hunt-title" class="font-display text-lg sm:text-xl font-bold leading-tight truncate">Secret Scavenger Hunt</h1>
+            <p id="stage-progress-text" class="text-xs font-bold text-ink/70">Clue 1 of 8</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onclick="toggleEditor()"
+            class="ink-btn bg-sky text-ink px-2.5 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1"
+            title="Edit clues, photos, GPS, and final message"
+          >
+            <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+            <span>Edit</span>
+          </button>
+          <button
+            type="button"
+            onclick="resetProgress()"
+            class="ink-btn bg-white text-ink p-1.5 rounded-xl"
+            title="Reset progress"
+          >
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Progress Bar -->
+      <div class="mt-3 w-full h-3.5 bg-paper rounded-full border-2 border-ink overflow-hidden">
+        <div id="progress-bar" class="h-full bg-mint transition-all duration-300" style="width: 12.5%;"></div>
+      </div>
+
+      <!-- Unlocked Codes Vault -->
+      <div class="mt-3 pt-3 border-t-2 border-dashed border-ink/20">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-extrabold uppercase tracking-wider text-ink/75 flex items-center gap-1">
+            <i data-lucide="key-round" class="w-3.5 h-3.5 text-coral"></i>
+            Unlocked Codes
+          </span>
+          <span class="text-[10px] font-extrabold bg-sunny/70 border border-ink px-2 py-0.5 rounded-full">
+            ALL ANSWERS UPPERCASE
+          </span>
+        </div>
+        <div id="unlocked-codes-grid" class="grid grid-cols-7 gap-1.5"></div>
+      </div>
+    </header>
+
+    <!-- Creator / Editor Drawer -->
+    <section id="editor-panel" class="hidden ink-card p-4 bg-paper space-y-4">
+      <div class="flex items-center justify-between border-b-2 border-ink pb-2.5">
+        <div>
+          <h2 class="font-display text-lg font-bold">Creator Studio</h2>
+          <p class="text-xs font-semibold text-ink/70">Set up every stage in one place: names, answers, clues, photos and GPS.</p>
+        </div>
+        <button type="button" onclick="toggleEditor()" class="ink-btn bg-coral text-white px-2.5 py-1 rounded-xl text-xs font-extrabold">
+          Close
+        </button>
+      </div>
+
+      <!-- Hunt Title & Final Message -->
+      <div class="space-y-2.5 bg-sunny/20 p-3 rounded-2xl border-2 border-ink">
+        <div>
+          <label class="block text-xs font-extrabold mb-1">Hunt Header Title</label>
+          <input id="edit-hunt-title" type="text" class="w-full px-3 py-2 rounded-xl bg-white ink-input text-sm font-bold" />
+        </div>
+        <div>
+          <label class="block text-xs font-extrabold mb-1">Completion Screen Message (Editable)</label>
+          <textarea id="edit-completion-message" rows="3" class="w-full px-3 py-2 rounded-xl bg-white ink-input text-sm font-semibold"></textarea>
+        </div>
+      </div>
+
+      <!-- Stage 8 QR Code Generator -->
+      <div class="bg-lilac/20 p-3 rounded-2xl border-2 border-ink space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold uppercase tracking-wide flex items-center gap-1">
+            <i data-lucide="qr-code" class="w-4 h-4"></i>
+            Stage 8 Secret QR Code
+          </span>
+          <span class="text-[11px] font-mono font-bold bg-white border border-ink px-2 py-0.5 rounded-lg">
+            YOU MEAN EVERYTHING TO ME
+          </span>
+        </div>
+        <div class="flex flex-col items-center gap-2 bg-white p-3 rounded-xl border-2 border-ink">
+          <div id="qr-preview-box"></div>
+          <button type="button" onclick="downloadQrCodePng()" class="ink-btn bg-sunny text-ink px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Download Printable QR (.png)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="rounded-xl border border-ink/30 bg-white p-3 text-[11px] font-semibold leading-relaxed">
+        <strong>Quick guide:</strong> Fill in each stage, add its photos if needed, then enable GPS and add its map coordinates. Use <strong>Apply Changes</strong> to save in this browser, or <strong>Download .html</strong> to create the file for your website.
+      </div>
+
+      <!-- Per-Stage Editor List -->
+      <div id="editor-stages-list" class="space-y-4"></div>
+
+      <!-- Save & Export Buttons -->
+      <div class="flex flex-col sm:flex-row gap-2 pt-2 border-t-2 border-ink">
+        <button type="button" onclick="saveEditorChanges()" class="flex-1 ink-btn bg-mint text-ink py-2.5 px-4 rounded-xl font-extrabold text-sm flex items-center justify-center gap-1.5">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>Apply Changes</span>
+        </button>
+        <button type="button" onclick="exportStandaloneHtml()" class="flex-1 ink-btn bg-tangerine text-ink py-2.5 px-4 rounded-xl font-extrabold text-sm flex items-center justify-center gap-1.5">
+          <i data-lucide="file-down" class="w-4 h-4"></i>
+          <span>Download .html</span>
+        </button>
+      </div>
+      <p id="editor-status-msg" class="text-xs font-extrabold text-center text-ink/80 min-h-[1rem]"></p>
+    </section>
+
+    <!-- Active Stage Card -->
+    <main id="stage-card" class="ink-card p-4 sm:p-5 relative pop-in space-y-4">
+      <div class="flex items-center justify-between gap-2">
+        <span id="stage-badge" class="px-3 py-1 rounded-full bg-lilac border-2 border-ink font-display text-xs font-bold uppercase tracking-wide">
+          Stage 1
+        </span>
+        <span id="stage-reward-tag" class="px-2.5 py-1 rounded-full bg-sunny border-2 border-ink text-[11px] font-extrabold">
+          Unlocks: BRX
+        </span>
+      </div>
+
+      <!-- Clue Photo -->
+      <div id="clue-photo-wrapper" class="hidden rounded-2xl border-2 border-ink overflow-hidden bg-paper shadow-hardSm">
+        <img id="clue-photo-img" src="" alt="Clue photo" class="w-full max-h-64 object-cover block" />
+      </div>
+
+      <!-- Clue Text -->
+      <div class="bg-paper rounded-2xl border-2 border-ink p-3.5">
+        <p id="clue-text" class="text-base sm:text-lg font-extrabold leading-snug text-ink"></p>
+      </div>
+
+      <!-- Hot & Cold GPS Radar -->
+      <div id="gps-radar-box" class="hidden rounded-2xl border-2 border-ink bg-sky/15 p-3.5 space-y-3">
+        <div class="flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <div class="relative flex items-center justify-center w-8 h-8">
+              <span class="radar-ring absolute w-7 h-7 rounded-full bg-coral/40"></span>
+              <div class="relative w-7 h-7 rounded-full bg-coral border-2 border-ink flex items-center justify-center text-white">
+                <i data-lucide="radar" class="w-4 h-4"></i>
+              </div>
+            </div>
+            <div>
+              <h3 class="font-display text-sm font-bold leading-tight">Hot &amp; Cold GPS Radar</h3>
+              <p id="gps-status-sub" class="text-[11px] font-bold text-ink/70">Tap start to track your distance</p>
+            </div>
+          </div>
+
+          <button type="button" id="gps-toggle-btn" onclick="toggleGpsRadar()" class="ink-btn bg-mint text-ink px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1">
+            <i data-lucide="navigation" class="w-3.5 h-3.5"></i>
+            <span id="gps-toggle-label">Start Radar</span>
+          </button>
+        </div>
+
+        <div id="gps-live-panel" class="hidden bg-white rounded-xl border-2 border-ink p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <span id="gps-temp-badge" class="px-2.5 py-0.5 rounded-full border-2 border-ink text-xs font-extrabold bg-sunny">
+              READY
+            </span>
+            <span id="gps-accuracy-text" class="text-[11px] font-mono font-bold text-ink/60"></span>
+          </div>
+          <p id="gps-distance-text" class="font-display text-xl font-bold text-ink">-- meters away</p>
+          <div class="w-full h-3 rounded-full bg-paper border-2 border-ink overflow-hidden">
+            <div id="gps-heat-bar" class="h-full bg-sky transition-all duration-300" style="width: 10%;"></div>
+          </div>
+          <div class="flex items-center justify-between pt-1">
+            <span id="gps-updated-time" class="text-[10px] font-mono font-bold text-ink/60">Waiting for fix...</span>
+            <button type="button" onclick="refreshGpsOnce()" class="ink-btn bg-paper text-ink px-2.5 py-1 rounded-lg text-[11px] font-extrabold flex items-center gap-1">
+              <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+              <span>Refresh Now</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hint Button & Drawer -->
+      <div>
+        <button type="button" onclick="toggleHint()" class="w-full ink-btn bg-sunny text-ink py-2.5 px-4 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2">
+          <i data-lucide="lightbulb" class="w-4 h-4"></i>
+          <span id="hint-btn-label">Show Hint for This Clue</span>
+        </button>
+
+        <div id="hint-drawer" class="hidden mt-2.5 rounded-2xl border-2 border-ink bg-sunny/25 p-3 space-y-2.5">
+          <div id="hint-photo-wrapper" class="hidden rounded-xl border-2 border-ink overflow-hidden bg-white">
+            <img id="hint-photo-img" src="" alt="Hint photo" class="w-full max-h-56 object-cover block" />
+          </div>
+          <p id="hint-text" class="text-sm font-bold text-ink"></p>
+        </div>
+      </div>
+
+      <!-- Stage 8 QR Scanner -->
+      <div id="qr-scanner-section" class="hidden rounded-2xl border-2 border-ink bg-lilac/20 p-3.5 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold uppercase tracking-wide flex items-center gap-1.5">
+            <i data-lucide="scan-line" class="w-4 h-4"></i>
+            Secret QR Code Scanner
+          </span>
+          <span class="text-[10px] font-extrabold bg-white border border-ink px-2 py-0.5 rounded-full">
+            STAGE 8 QR
+          </span>
+        </div>
+        <button type="button" id="qr-scan-btn" onclick="toggleQrScanner()" class="w-full ink-btn bg-lilac text-ink py-2.5 px-4 rounded-xl font-extrabold text-sm flex items-center justify-center gap-2">
+          <i data-lucide="camera" class="w-4 h-4"></i>
+          <span id="qr-scan-btn-label">Scan Secret QR Code</span>
+        </button>
+        <div id="qr-reader-container" class="hidden rounded-xl overflow-hidden border-2 border-ink bg-black"></div>
+        <p id="qr-scanner-status" class="text-xs font-bold text-ink/75 text-center"></p>
+      </div>
+
+      <!-- Answer Input Form -->
+      <form id="answer-form" onsubmit="handleAnswerSubmit(event)" class="space-y-2.5 pt-1">
+        <div class="flex items-center justify-between">
+          <label for="answer-input" id="answer-label" class="text-xs font-extrabold uppercase tracking-wider text-ink/80">
+            Enter Code (UPPERCASE)
+          </label>
+          <span class="text-[11px] font-bold text-ink/60">Auto UPPERCASE</span>
+        </div>
+
+        <input
+          id="answer-input"
+          type="text"
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          placeholder="TYPE ANSWER HERE..."
+          oninput="this.value = this.value.toUpperCase()"
+          class="w-full px-3.5 py-3 rounded-xl bg-white ink-input font-display text-base font-bold tracking-wider uppercase text-ink focus:outline-none"
+        />
+
+        <button type="submit" class="w-full ink-btn bg-mint text-ink py-3 px-4 rounded-xl font-display text-base font-bold flex items-center justify-center gap-2">
+          <i data-lucide="unlock" class="w-5 h-5"></i>
+          <span>Submit &amp; Unlock</span>
+        </button>
+
+        <p id="feedback-msg" class="text-xs font-extrabold text-center min-h-[1.25rem]"></p>
+      </form>
+
+      <!-- Stage 8 A-Z Alphabet Strip -->
+      <div id="alphabet-section" class="hidden pt-3 border-t-2 border-dashed border-ink/25 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-extrabold uppercase tracking-wider flex items-center gap-1">
+            <i data-lucide="alphabet" class="w-4 h-4 text-coral"></i>
+            Alphabet Helper (A–Z)
+          </span>
+          <span class="text-[10px] font-bold text-ink/65">Tap letter to type</span>
+        </div>
+        <div id="alphabet-grid" class="grid grid-cols-7 sm:grid-cols-9 gap-1"></div>
+      </div>
+    </main>
+
+    <!-- Completion Screen -->
+    <section id="completion-screen" class="hidden ink-card p-5 text-center space-y-4 pop-in">
+      <div class="w-16 h-16 mx-auto rounded-3xl bg-sunny border-2 border-ink shadow-hard flex items-center justify-center">
+        <i data-lucide="party-popper" class="w-9 h-9 text-ink"></i>
+      </div>
+      <div>
+        <span class="inline-block px-3 py-1 rounded-full bg-mint border-2 border-ink text-xs font-extrabold uppercase mb-2">
+          Hunt Complete!
+        </span>
+        <h2 class="font-display text-2xl font-bold text-ink">You Cracked Every Clue!</h2>
+      </div>
+
+      <div class="bg-paper rounded-2xl border-2 border-ink p-4 text-left">
+        <p id="completion-message-display" class="text-sm sm:text-base font-bold leading-relaxed whitespace-pre-line text-ink"></p>
+      </div>
+
+      <div class="bg-sunny/25 rounded-2xl border-2 border-ink p-3 space-y-2">
+        <p class="text-xs font-extrabold uppercase tracking-wider">All 7 Unlocked Codes</p>
+        <div id="final-codes-row" class="flex flex-wrap justify-center gap-1.5"></div>
+      </div>
+
+      <button type="button" onclick="resetProgress()" class="w-full ink-btn bg-sky text-ink py-3 px-4 rounded-xl font-display text-base font-bold">
+        Play Again From Start
+      </button>
+    </section>
+
+  </div>
+
+  <!--__EMBEDDED_CONFIG__-->
+  <script>
+    const DEFAULT_CONFIG = {
+      huntTitle: "Secret Scavenger Hunt",
+      completionMessage: "Well done for completing the scavenger hunt! I hope you had the best time following every clue and finding all the hidden spots.",
+      stages: [
+        {
+          id: 1,
+          title: "Stage 1",
+          mainText: "Look closely at the picture clue to figure out the place and find the secret code!",
+          hintText: "Check out the park gates for a clue.",
+          answer: "1928RAE",
+          unlocksCode: "BRX",
+          mainPhoto: "",
+          hintPhoto: "",
+          gpsEnabled: false,
+          targetLat: "",
+          targetLng: "",
+          hideClueUntilMeters: 0,
+          showQrScanner: false,
+          showAlphabet: false
+        },
+        {
+          id: 2,
+          title: "Stage 2",
+          mainText: "Go to ware someones bum burned an imprint on the bench",
+          hintText: "Look closely at the bench photo hint once added.",
+          answer: "06/06/26",
+          unlocksCode: "PHD",
+          mainPhoto: "",
+          hintPhoto: "",
+          gpsEnabled: false,
+          targetLat: "",
+          targetLng: "",
+          hideClueUntilMeters: 0,
+          showQrScanner: false,
+          showAlphabet: false
+        },
+        {
+          id: 3,
+          title: "Stage 3",
+          mainText: "Look under the bench were we got monitored by the drone",
+          hintText: "Check underneath the bench carefully.",
+          answer: "03/07/26",
+          unlocksCode: "QHY",
+          mainPhoto: "",
+          hintPhoto: "",
+          gpsEnabled: true,
+          targetLat: "53.825889",
+          targetLng: "-1.788028",
+          hideClueUntilMeters: 0,
+          showQrScanner: false,
+          showAlphabet: false
+        },
+        {
+          id: 4,
+          title: "Stage 4",
+          mainText: 'Open envelope "I LOVE YOU SO MUCH"',
+          hintText: "Look inside the envelope labeled I LOVE YOU SO MUCH.",
+          answer: "26/07/25",
+          unlocksCode: "HUB",
+          mainPhoto: "",
+          hintPhoto: "",
+          gpsEnabled: false,
+          targetLat: "",
+          targetLng: "",
+          hideClueUntilMeters: 0,
+          showQrScanner: false,
+          showAlphabet: false
+        },
+        {
+          id: 5,
+          title: "Stage 5",
+          mainText: "Check out the photo clue for this stop!",
+          hintText: "Look around the bench where we got caught holding hands",
+          answer: "04/05/26",
+          unlocksCode: "WKL",
+          mainPhoto: "",
+          hintPhoto: "",
+          gpsEnabled: false,
+          targetLat: "",
+          targetLng: "",
+          hideClueUntilMeters: 0,
+          showQrScanner: false,
+          showAlphabet: false
+        },
+        {
+          id: 6,
+          title: "Stage 6",
+          mainText: "Go to were we played straight or gay and find the information board what year was the Croft house made",
+          hintText: "Read the information board near the Croft house.",
+          answer: "1729",
+          unlocksCode: "QJW",
+          mainPhoto: "",
+          hintPhoto: "",
+          gpsEnabled: false,
+          targetLat: "",
+          targetLng: "",
+          hideClueUntilMeters: 0,
+          showQrScanner: false,
+          showAlphabet: false
+        },
+        {
+          id: 7,
+          title: "Stage 7",
+          mainText: "Go to wear we first met after we started dating and look around the road name sign",
+          hintText: "Look near the Co-op and Grosvenor Rd. sign.",
+          answer: "1047",
+          unlocksCode: "RPH",
+          mainPhoto: "",
+          hintPhoto: "",
+          gpsEnabled: false,
+          targetLat: "",
+          targetLng: "",
+          hideClueUntilMeters: 0,
+          showQrScanner: false,
+          showAlphabet: false
+        },
+        {
+          id: 8,
+          title: "Stage 8",
+          mainText: "Go to our spot",
+          hintText: "Scan the secret QR code at our spot, or type the final phrase below in UPPERCASE.",
+          answer: "YOU MEAN EVERYTHING TO ME",
+          unlocksCode: "",
+          mainPhoto: "",
+          hintPhoto: "",
+          gpsEnabled: false,
+          targetLat: "",
+          targetLng: "",
+          hideClueUntilMeters: 0,
+          showQrScanner: true,
+          showAlphabet: true
+        }
+      ]
+    };
+
+    const STORAGE_KEY = "scavenger_hunt_state_v1";
+    const CONFIG_STORAGE_KEY = "scavenger_hunt_config_v1";
+
+    let config = loadConfig();
+    let state = loadState();
+    let gpsWatchId = null;
+    let lastKnownDistance = null;
+    let qrScannerInstance = null;
+    let qrScannerActive = false;
+
+    function loadConfig() {
+      try {
+        if (window.__EMBEDDED_HUNT_CONFIG__) {
+          return mergeConfig(window.__EMBEDDED_HUNT_CONFIG__);
+        }
+        const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
+        if (saved) {
+          return mergeConfig(JSON.parse(saved));
+        }
+      } catch (err) {
+        console.error("Failed to load config:", err);
+      }
+      return mergeConfig(DEFAULT_CONFIG);
+    }
+
+    function mergeConfig(raw) {
+      const base = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+      if (!raw || typeof raw !== "object") return base;
+      base.huntTitle = typeof raw.huntTitle === "string" && raw.huntTitle.trim() ? raw.huntTitle : base.huntTitle;
+      base.completionMessage = typeof raw.completionMessage === "string" ? raw.completionMessage : base.completionMessage;
+      if (Array.isArray(raw.stages) && raw.stages.length > 0) {
+        base.stages = base.stages.map((defStage, idx) => {
+          const incoming = raw.stages[idx] || {};
+          return {
+            ...defStage,
+            ...incoming,
+            id: idx + 1,
+            title: incoming.title || `Stage ${idx + 1}`,
+            answer: String(incoming.answer ?? defStage.answer).toUpperCase(),
+            unlocksCode: String(incoming.unlocksCode ?? defStage.unlocksCode).toUpperCase(),
+            mainPhoto: typeof incoming.mainPhoto === "string" ? incoming.mainPhoto : "",
+            hintPhoto: typeof incoming.hintPhoto === "string" ? incoming.hintPhoto : "",
+            gpsEnabled: Boolean(incoming.gpsEnabled),
+            targetLat: String(incoming.targetLat ?? ""),
+            targetLng: String(incoming.targetLng ?? ""),
+            hideClueUntilMeters: Math.max(0, Number(incoming.hideClueUntilMeters) || 0),
+            showQrScanner: Boolean(incoming.showQrScanner),
+            showAlphabet: Boolean(incoming.showAlphabet)
+          };
+        });
+      }
+      return base;
+    }
+
+    function loadState() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return {
+            currentStageIndex: Math.max(0, Math.min(config.stages.length - 1, Number(parsed.currentStageIndex) || 0)),
+            unlockedCodes: Array.isArray(parsed.unlockedCodes) ? parsed.unlockedCodes : [],
+            completed: Boolean(parsed.completed)
+          };
+        }
+      } catch (err) {
+        console.error("Failed to load state:", err);
+      }
+      return {
+        currentStageIndex: 0,
+        unlockedCodes: [],
+        completed: false
+      };
+    }
+
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (err) {
+        console.error("Failed to save state:", err);
+      }
+    }
+
+    function saveConfigToStorage() {
+      try {
+        localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+      } catch (err) {
+        console.error("Failed to save config:", err);
+      }
+    }
+
+    function renderAll() {
+      stopGpsTracking();
+      stopQrScannerIfRunning();
+
+      document.getElementById("hunt-title").textContent = config.huntTitle;
+      renderUnlockedCodesVault();
+
+      const stageCard = document.getElementById("stage-card");
+      const completionScreen = document.getElementById("completion-screen");
+
+      if (state.completed) {
+        stageCard.classList.add("hidden");
+        completionScreen.classList.remove("hidden");
+        document.getElementById("stage-progress-text").textContent = "All 8 clues solved!";
+        document.getElementById("progress-bar").style.width = "100%";
+        document.getElementById("completion-message-display").textContent = config.completionMessage;
+        renderFinalCodesRow();
+        lucide.createIcons();
+        return;
+      }
+
+      completionScreen.classList.add("hidden");
+      stageCard.classList.remove("hidden");
+
+      const stage = config.stages[state.currentStageIndex];
+      const total = config.stages.length;
+
+      document.getElementById("stage-progress-text").textContent = `Clue ${state.currentStageIndex + 1} of ${total}`;
+      document.getElementById("progress-bar").style.width = `${((state.currentStageIndex + 1) / total) * 100}%`;
+
+      document.getElementById("stage-badge").textContent = stage.title;
+      const rewardTag = document.getElementById("stage-reward-tag");
+      if (stage.unlocksCode) {
+        rewardTag.textContent = `Unlocks: ${stage.unlocksCode}`;
+        rewardTag.classList.remove("hidden");
+      } else {
+        rewardTag.textContent = "Final Answer";
+      }
+
+      // Main Photo
+      const mainPhotoWrapper = document.getElementById("clue-photo-wrapper");
+      const mainPhotoImg = document.getElementById("clue-photo-img");
+      if (stage.mainPhoto) {
+        mainPhotoImg.src = stage.mainPhoto;
+        mainPhotoWrapper.classList.remove("hidden");
+      } else {
+        mainPhotoImg.src = "";
+        mainPhotoWrapper.classList.add("hidden");
+      }
+
+      // Proximity check
+      const parsedLat = parseCoordinate(stage.targetLat, "lat");
+      const parsedLng = parseCoordinate(stage.targetLng, "lng");
+      const hasCoords = stage.gpsEnabled && parsedLat !== null && parsedLng !== null;
+      const radius = Number(stage.hideClueUntilMeters) || 0;
+      const proximityLocked = hasCoords && radius > 0 && (lastKnownDistance === null || lastKnownDistance > radius);
+
+      const clueTextEl = document.getElementById("clue-text");
+      if (proximityLocked) {
+        clueTextEl.textContent = `Clue locked until you get within ${radius}m of the spot! Turn on the Hot & Cold GPS Radar below.`;
+        mainPhotoWrapper.classList.add("hidden");
+      } else {
+        clueTextEl.textContent = stage.mainText;
+      }
+
+      // GPS Radar visibility
+      const gpsBox = document.getElementById("gps-radar-box");
+      if (stage.gpsEnabled) {
+        gpsBox.classList.remove("hidden");
+        document.getElementById("gps-live-panel").classList.add("hidden");
+        document.getElementById("gps-toggle-label").textContent = "Start Radar";
+        document.getElementById("gps-status-sub").textContent = hasCoords
+          ? "Tap Start Radar to track your distance"
+          : "Add target coordinates in Edit first";
+      } else {
+        gpsBox.classList.add("hidden");
+      }
+
+      // Reset hint drawer
+      const hintDrawer = document.getElementById("hint-drawer");
+      hintDrawer.classList.add("hidden");
+      document.getElementById("hint-btn-label").textContent = "Show Hint for This Clue";
+      document.getElementById("hint-text").textContent = stage.hintText || "No extra text hint for this stage.";
+
+      const hintPhotoWrapper = document.getElementById("hint-photo-wrapper");
+      const hintPhotoImg = document.getElementById("hint-photo-img");
+      if (stage.hintPhoto) {
+        hintPhotoImg.src = stage.hintPhoto;
+        hintPhotoWrapper.classList.remove("hidden");
+      } else {
+        hintPhotoImg.src = "";
+        hintPhotoWrapper.classList.add("hidden");
+      }
+
+      // Stage 8 QR scanner
+      const qrSection = document.getElementById("qr-scanner-section");
+      if (stage.showQrScanner) {
+        qrSection.classList.remove("hidden");
+        document.getElementById("qr-scanner-status").textContent = "";
+      } else {
+        qrSection.classList.add("hidden");
+      }
+
+      // Answer input reset
+      const answerInput = document.getElementById("answer-input");
+      answerInput.value = "";
+      document.getElementById("feedback-msg").textContent = "";
+      document.getElementById("feedback-msg").className = "text-xs font-extrabold text-center min-h-[1.25rem]";
+
+      // Stage 8 Alphabet Helper
+      const alphaSection = document.getElementById("alphabet-section");
+      if (stage.showAlphabet) {
+        alphaSection.classList.remove("hidden");
+        renderAlphabetStrip();
+      } else {
+        alphaSection.classList.add("hidden");
+      }
+
+      lucide.createIcons();
+    }
+
+    function renderUnlockedCodesVault() {
+      const grid = document.getElementById("unlocked-codes-grid");
+      const codeStages = config.stages.filter((s) => Boolean(s.unlocksCode));
+      grid.innerHTML = "";
+
+      codeStages.forEach((stage, idx) => {
+        const isUnlocked = state.unlockedCodes.includes(stage.unlocksCode);
+        const colors = ["bg-sunny", "bg-mint", "bg-sky", "bg-lilac", "bg-tangerine", "bg-coral", "bg-sunny"];
+        const badgeColor = colors[idx % colors.length];
+
+        const slot = document.createElement("div");
+        slot.className = isUnlocked
+          ? `${badgeColor} text-ink border-2 border-ink rounded-xl py-1.5 px-1 text-center font-display text-xs font-bold shadow-hardSm pop-in`
+          : "bg-paper text-ink/40 border-2 border-dashed border-ink/35 rounded-xl py-1.5 px-1 text-center font-mono text-[11px] font-bold";
+        slot.textContent = isUnlocked ? stage.unlocksCode : `#${idx + 1}`;
+        grid.appendChild(slot);
+      });
+    }
+
+    function renderFinalCodesRow() {
+      const row = document.getElementById("final-codes-row");
+      row.innerHTML = "";
+      config.stages
+        .filter((s) => Boolean(s.unlocksCode))
+        .forEach((stage) => {
+          const pill = document.createElement("span");
+          pill.className = "px-3 py-1 rounded-xl bg-mint border-2 border-ink font-display text-sm font-bold shadow-hardSm";
+          pill.textContent = stage.unlocksCode;
+          row.appendChild(pill);
+        });
+    }
+
+    function renderAlphabetStrip() {
+      const grid = document.getElementById("alphabet-grid");
+      grid.innerHTML = "";
+      const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+      letters.forEach((ch) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "py-1.5 rounded-lg bg-white border-2 border-ink font-display text-xs font-bold hover:bg-sunny active:translate-y-0.5 transition";
+        btn.textContent = ch;
+        btn.onclick = () => {
+          const input = document.getElementById("answer-input");
+          input.value = (input.value + ch).toUpperCase();
+          input.focus();
+        };
+        grid.appendChild(btn);
+      });
+    }
+
+    function toggleHint() {
+      const drawer = document.getElementById("hint-drawer");
+      const label = document.getElementById("hint-btn-label");
+      const isHidden = drawer.classList.contains("hidden");
+      drawer.classList.toggle("hidden", !isHidden);
+      label.textContent = isHidden ? "Hide Hint" : "Show Hint for This Clue";
+    }
+
+    function handleAnswerSubmit(event) {
+      event.preventDefault();
+      if (state.completed) return;
+
+      const stage = config.stages[state.currentStageIndex];
+      const inputEl = document.getElementById("answer-input");
+      const feedbackEl = document.getElementById("feedback-msg");
+      const cardEl = document.getElementById("stage-card");
+
+      const submitted = inputEl.value.trim().toUpperCase();
+      const expected = String(stage.answer || "").trim().toUpperCase();
+
+      if (!submitted) {
+        feedbackEl.textContent = "Type an answer in UPPERCASE first!";
+        feedbackEl.className = "text-xs font-extrabold text-center text-coral min-h-[1.25rem]";
+        return;
+      }
+
+      if (submitted === expected) {
+        if (stage.unlocksCode && !state.unlockedCodes.includes(stage.unlocksCode)) {
+          state.unlockedCodes.push(stage.unlocksCode);
+        }
+
+        if (state.currentStageIndex < config.stages.length - 1) {
+          state.currentStageIndex += 1;
+          lastKnownDistance = null;
+          saveState();
+          renderAll();
+          document.getElementById("feedback-msg").textContent = stage.unlocksCode
+            ? `Correct! Unlocked ${stage.unlocksCode}!`
+            : "Correct! Moving to the next clue!";
+          document.getElementById("feedback-msg").className = "text-xs font-extrabold text-center text-green-700 min-h-[1.25rem]";
+        } else {
+          state.completed = true;
+          saveState();
+          renderAll();
+        }
+      } else {
+        feedbackEl.textContent = "Not quite! Check your spelling and UPPERCASE letters.";
+        feedbackEl.className = "text-xs font-extrabold text-center text-coral min-h-[1.25rem]";
+        cardEl.classList.remove("wiggle");
+        void cardEl.offsetWidth;
+        cardEl.classList.add("wiggle");
+      }
+    }
+
+    function resetProgress() {
+      state = {
+        currentStageIndex: 0,
+        unlockedCodes: [],
+        completed: false
+      };
+      lastKnownDistance = null;
+      saveState();
+      renderAll();
+    }
+
+    // ==================== GPS HOT & COLD RADAR ====================
+    function parseCoordinate(rawVal, axis = "lat") {
+      if (rawVal === null || rawVal === undefined) return null;
+      const str = String(rawVal).trim().toUpperCase();
+      if (!str) return null;
+
+      const plainNum = Number(str);
+      if (!Number.isNaN(plainNum) && Number.isFinite(plainNum)) {
+        const maxDeg = axis === "lat" ? 90 : 180;
+        return Math.abs(plainNum) <= maxDeg ? plainNum : null;
+      }
+
+      const dmsMatch = str.match(
+        /^\s*([+-]?\d+(?:\.\d+)?)\s*(?:°|D|\s)\s*(\d+(?:\.\d+)?)?\s*(?:'|′|M|\s)?\s*(\d+(?:\.\d+)?)?\s*(?:"|″|S)?\s*([NSEW])?\s*$/
+      );
+      if (dmsMatch) {
+        const deg = parseFloat(dmsMatch[1]) || 0;
+        const min = parseFloat(dmsMatch[2]) || 0;
+        const sec = parseFloat(dmsMatch[3]) || 0;
+        const hemi = dmsMatch[4] || "";
+
+        let decimal = Math.abs(deg) + min / 60 + sec / 3600;
+        if (deg < 0 || hemi === "S" || hemi === "W") {
+          decimal = -decimal;
+        }
+
+        const maxDeg = axis === "lat" ? 90 : 180;
+        return Number.isFinite(decimal) && Math.abs(decimal) <= maxDeg
+          ? Number(decimal.toFixed(6))
+          : null;
+      }
+
+      return null;
+    }
+
+    function calculateDistanceMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371000;
+      const toRad = (deg) => (deg * Math.PI) / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    function toggleGpsRadar() {
+      if (gpsWatchId !== null) {
+        stopGpsTracking();
+      } else {
+        startGpsTracking();
+      }
+    }
+
+    function startGpsTracking() {
+      const stage = config.stages[state.currentStageIndex];
+      const targetLat = stage ? parseCoordinate(stage.targetLat, "lat") : null;
+      const targetLng = stage ? parseCoordinate(stage.targetLng, "lng") : null;
+
+      if (!stage || targetLat === null || targetLng === null) {
+        document.getElementById("gps-status-sub").textContent = "Set valid coordinates in Edit first";
+        return;
+      }
+
+      if (!navigator.geolocation) {
+        document.getElementById("gps-status-sub").textContent = "GPS not supported on this device";
+        return;
+      }
+
+      document.getElementById("gps-live-panel").classList.remove("hidden");
+      document.getElementById("gps-toggle-label").textContent = "Stop Radar";
+      document.getElementById("gps-status-sub").textContent = "Getting GPS fix...";
+
+      const onSuccess = (pos) => {
+        const dist = calculateDistanceMeters(
+          pos.coords.latitude,
+          pos.coords.longitude,
+          targetLat,
+          targetLng
+        );
+        const acc = Math.round(pos.coords.accuracy || 0);
+        const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+        document.getElementById("gps-updated-time").textContent = `Updated ${nowStr}`;
+        document.getElementById("gps-status-sub").textContent = "Live Hot & Cold radar active";
+        updateRadarDisplay(dist, acc);
+      };
+
+      const onError = (err) => {
+        if (err && err.code === err.TIMEOUT) {
+          navigator.geolocation.getCurrentPosition(
+            onSuccess,
+            () => {
+              document.getElementById("gps-temp-badge").textContent = "TIMED OUT";
+              document.getElementById("gps-distance-text").textContent = "Tap Refresh Now or move outside";
+            },
+            { enableHighAccuracy: false, maximumAge: 10000, timeout: 15000 }
+          );
+          return;
+        }
+        document.getElementById("gps-temp-badge").textContent = "GPS ERROR";
+        document.getElementById("gps-distance-text").textContent = "Allow Location permission & use HTTPS";
+      };
+
+      navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+        enableHighAccuracy: true,
+        maximumAge: 5000,
+        timeout: 12000
+      });
+
+      gpsWatchId = navigator.geolocation.watchPosition(onSuccess, onError, {
+        enableHighAccuracy: true,
+        maximumAge: 3000,
+        timeout: 20000
+      });
+    }
+
+    function refreshGpsOnce() {
+      const stage = config.stages[state.currentStageIndex];
+      const targetLat = stage ? parseCoordinate(stage.targetLat, "lat") : null;
+      const targetLng = stage ? parseCoordinate(stage.targetLng, "lng") : null;
+      if (!navigator.geolocation || targetLat === null || targetLng === null) return;
+
+      document.getElementById("gps-status-sub").textContent = "Refreshing location...";
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const dist = calculateDistanceMeters(
+            pos.coords.latitude,
+            pos.coords.longitude,
+            targetLat,
+            targetLng
+          );
+          const acc = Math.round(pos.coords.accuracy || 0);
+          const nowStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+          document.getElementById("gps-updated-time").textContent = `Updated ${nowStr}`;
+          document.getElementById("gps-status-sub").textContent = "Live Hot & Cold radar active";
+          updateRadarDisplay(dist, acc);
+        },
+        () => {
+          document.getElementById("gps-status-sub").textContent = "Could not refresh — try again";
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 12000 }
+      );
+    }
+
+    function stopGpsTracking() {
+      if (gpsWatchId !== null && navigator.geolocation) {
+        navigator.geolocation.clearWatch(gpsWatchId);
+        gpsWatchId = null;
+      }
+      const label = document.getElementById("gps-toggle-label");
+      if (label) label.textContent = "Start Radar";
+    }
+
+    function updateRadarDisplay(meters, accuracy) {
+      const prevDistance = lastKnownDistance;
+      lastKnownDistance = meters;
+
+      const rounded = Math.round(meters);
+      const distText = rounded >= 1000
+        ? `${(meters / 1000).toFixed(2)} km away`
+        : `${rounded} meters away`;
+
+      let trend = "";
+      if (prevDistance !== null && Math.abs(meters - prevDistance) >= 1.5) {
+        trend = meters < prevDistance ? " (Getting Warmer!)" : " (Getting Colder!)";
+      }
+
+      document.getElementById("gps-distance-text").textContent = `${distText}${trend}`;
+      document.getElementById("gps-accuracy-text").textContent = accuracy ? `±${accuracy}m` : "";
+
+      const badge = document.getElementById("gps-temp-badge");
+      const bar = document.getElementById("gps-heat-bar");
+
+      if (meters <= 12) {
+        badge.textContent = "BOILING HOT 🔥";
+        badge.className = "px-2.5 py-0.5 rounded-full border-2 border-ink text-xs font-extrabold bg-coral text-white";
+        bar.className = "h-full bg-coral transition-all duration-300";
+        bar.style.width = "100%";
+      } else if (meters <= 35) {
+        badge.textContent = "HOT ☀️";
+        badge.className = "px-2.5 py-0.5 rounded-full border-2 border-ink text-xs font-extrabold bg-tangerine";
+        bar.className = "h-full bg-tangerine transition-all duration-300";
+        bar.style.width = "78%";
+      } else if (meters <= 100) {
+        badge.textContent = "WARMING UP 🌤️";
+        badge.className = "px-2.5 py-0.5 rounded-full border-2 border-ink text-xs font-extrabold bg-sunny";
+        bar.className = "h-full bg-sunny transition-all duration-300";
+        bar.style.width = "52%";
+      } else if (meters <= 300) {
+        badge.textContent = "CHILLY 💨";
+        badge.className = "px-2.5 py-0.5 rounded-full border-2 border-ink text-xs font-extrabold bg-mint";
+        bar.className = "h-full bg-mint transition-all duration-300";
+        bar.style.width = "30%";
+      } else {
+        badge.textContent = "FREEZING ❄️";
+        badge.className = "px-2.5 py-0.5 rounded-full border-2 border-ink text-xs font-extrabold bg-sky";
+        bar.className = "h-full bg-sky transition-all duration-300";
+        bar.style.width = "12%";
+      }
+
+      const stage = config.stages[state.currentStageIndex];
+      const radius = Number(stage && stage.hideClueUntilMeters) || 0;
+      if (radius > 0) {
+        const clueTextEl = document.getElementById("clue-text");
+        if (meters <= radius) {
+          clueTextEl.textContent = stage.mainText;
+          if (stage.mainPhoto) {
+            document.getElementById("clue-photo-img").src = stage.mainPhoto;
+            document.getElementById("clue-photo-wrapper").classList.remove("hidden");
+          }
+        }
+      }
+    }
+
+    // ==================== STAGE 8 QR SCANNER & GENERATOR ====================
+    function renderQrPreview() {
+      const box = document.getElementById("qr-preview-box");
+      if (!box || typeof QRCode === "undefined") return;
+      box.innerHTML = "";
+      const stage8 = config.stages[7] || config.stages[config.stages.length - 1];
+      const secretText = String((stage8 && stage8.answer) || "YOU MEAN EVERYTHING TO ME").toUpperCase();
+      new QRCode(box, {
+        text: secretText,
+        width: 156,
+        height: 156,
+        colorDark: "#1E1B2E",
+        colorLight: "#FFFFFF",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+    }
+
+    function downloadQrCodePng() {
+      const box = document.getElementById("qr-preview-box");
+      if (!box) return;
+      const canvas = box.querySelector("canvas");
+      const img = box.querySelector("img");
+      const dataUrl = canvas ? canvas.toDataURL("image/png") : (img ? img.src : "");
+      if (!dataUrl) return;
+      const link = document.createElement("a");
+      link.download = "stage-8-secret-qr.png";
+      link.href = dataUrl;
+      link.click();
+    }
+
+    async function toggleQrScanner() {
+      if (qrScannerActive) {
+        await stopQrScannerIfRunning();
+        return;
+      }
+
+      if (typeof Html5Qrcode === "undefined") {
+        document.getElementById("qr-scanner-status").textContent = "QR scanner library failed to load.";
+        return;
+      }
+
+      const readerEl = document.getElementById("qr-reader-container");
+      const statusEl = document.getElementById("qr-scanner-status");
+      const btnLabel = document.getElementById("qr-scan-btn-label");
+
+      readerEl.classList.remove("hidden");
+      statusEl.textContent = "Starting camera...";
+      btnLabel.textContent = "Stop Camera Scanner";
+
+      try {
+        qrScannerInstance = new Html5Qrcode("qr-reader-container");
+        await qrScannerInstance.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 210, height: 210 } },
+          (decodedText) => {
+            const clean = String(decodedText || "").trim().toUpperCase();
+            const inputEl = document.getElementById("answer-input");
+            inputEl.value = clean;
+            statusEl.textContent = `Scanned: ${clean}`;
+            stopQrScannerIfRunning();
+            const stage = config.stages[state.currentStageIndex];
+            if (stage && clean === String(stage.answer || "").trim().toUpperCase()) {
+              document.getElementById("answer-form").requestSubmit();
+            }
+          },
+          () => {}
+        );
+        qrScannerActive = true;
+        statusEl.textContent = "Point camera at the Stage 8 QR code.";
+      } catch (err) {
+        readerEl.classList.add("hidden");
+        btnLabel.textContent = "Scan Secret QR Code";
+        statusEl.textContent = "Camera unavailable — type the answer below instead.";
+      }
+    }
+
+    async function stopQrScannerIfRunning() {
+      const btnLabel = document.getElementById("qr-scan-btn-label");
+      const readerEl = document.getElementById("qr-reader-container");
+      if (btnLabel) btnLabel.textContent = "Scan Secret QR Code";
+      if (readerEl) readerEl.classList.add("hidden");
+
+      if (qrScannerInstance && qrScannerActive) {
+        try {
+          await qrScannerInstance.stop();
+          await qrScannerInstance.clear();
+        } catch (err) {
+          // Ignore stop errors
+        }
+      }
+      qrScannerInstance = null;
+      qrScannerActive = false;
+    }
+
+    // ==================== CREATOR EDITOR & EXPORT ====================
+    function toggleEditor() {
+      const panel = document.getElementById("editor-panel");
+      const willOpen = panel.classList.contains("hidden");
+      panel.classList.toggle("hidden", !willOpen);
+      if (willOpen) {
+        populateEditorFields();
+        renderQrPreview();
+        lucide.createIcons();
+      }
+    }
+
+    function populateEditorFields() {
+      document.getElementById("edit-hunt-title").value = config.huntTitle;
+      document.getElementById("edit-completion-message").value = config.completionMessage;
+      document.getElementById("editor-status-msg").textContent = "";
+
+      const listEl = document.getElementById("editor-stages-list");
+      listEl.innerHTML = "";
+
+      config.stages.forEach((stage, idx) => {
+        const card = document.createElement("div");
+        card.className = "rounded-2xl border-2 border-ink bg-white p-3 space-y-2.5";
+        const isFinalStage = idx === config.stages.length - 1;
+        card.className = "rounded-2xl border-2 border-ink bg-white p-3.5 space-y-3 shadow-hardSm";
+        card.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="w-8 h-8 shrink-0 rounded-xl bg-sunny border-2 border-ink flex items-center justify-center font-display font-bold">${idx + 1}</span>
+            <div class="min-w-0 flex-1">
+              <p class="font-display text-sm font-bold">Stage ${idx + 1}${isFinalStage ? " · FINISH" : ""}</p>
+              <p class="text-[10px] font-bold text-ink/60">${stage.mainPhoto ? "📷 Clue photo added" : "No clue photo"} · ${stage.gpsEnabled ? "📍 GPS enabled" : "GPS off"}</p>
+            </div>
+            <span class="text-[10px] font-extrabold bg-paper border border-ink px-2 py-1 rounded-lg">${escapeHtml(stage.answer)}</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-[11px] font-extrabold mb-1">Stage name</label>
+              <input id="edit-stage-title-${idx}" type="text" value="${escapeAttr(stage.title)}" class="w-full px-2.5 py-2 rounded-xl bg-paper ink-input text-xs font-bold" />
+            </div>
+            <div>
+              <label class="block text-[11px] font-extrabold mb-1">Correct answer / code</label>
+              <input id="edit-stage-answer-${idx}" type="text" value="${escapeAttr(stage.answer)}" class="w-full px-2.5 py-2 rounded-xl bg-paper ink-input text-xs font-bold uppercase" />
+            </div>
+          </div>
+
+          <div class="bg-paper/80 p-3 rounded-xl border border-ink/20 space-y-2">
+            <p class="text-[11px] font-extrabold uppercase tracking-wide">✏️ Clue and hint</p>
+            <div>
+              <label class="block text-[11px] font-extrabold mb-1">Main clue</label>
+              <textarea id="edit-stage-text-${idx}" rows="3" placeholder="Write what the player sees..." class="w-full px-2.5 py-2 rounded-xl bg-white ink-input text-xs font-bold">${escapeHtml(stage.mainText)}</textarea>
+            </div>
+            <div>
+              <label class="block text-[11px] font-extrabold mb-1">Hint (optional)</label>
+              <textarea id="edit-stage-hint-${idx}" rows="2" placeholder="Add a helpful hint..." class="w-full px-2.5 py-2 rounded-xl bg-white ink-input text-xs font-semibold">${escapeHtml(stage.hintText)}</textarea>
+            </div>
+          </div>
+
+          <div class="bg-sunny/20 p-3 rounded-xl border border-ink/20 space-y-2">
+            <p class="text-[11px] font-extrabold uppercase tracking-wide">📸 Photos</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div class="bg-white p-2 rounded-xl border border-ink/30 space-y-1.5">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-[11px] font-extrabold">Main clue photo</span>
+                  ${stage.mainPhoto ? `<button type="button" onclick="clearPhoto(${idx}, 'mainPhoto')" class="text-[10px] font-extrabold text-coral underline">Remove</button>` : ""}
+                </div>
+                ${stage.mainPhoto ? `<img src="${stage.mainPhoto}" alt="Main clue preview" class="w-full h-24 object-cover rounded-lg border border-ink/20" />` : `<div class="h-16 rounded-lg bg-paper flex items-center justify-center text-[10px] font-bold text-ink/50">No photo selected</div>`}
+                <input type="file" accept="image/*" onchange="handlePhotoUpload(event, ${idx}, 'mainPhoto')" class="block w-full text-[10px]" />
+                <p class="text-[9px] font-semibold text-ink/60">${isFinalStage ? "Shown with the final clue when arrival unlocks." : "Shown with this clue when it is unlocked."}</p>
+              </div>
+              <div class="bg-white p-2 rounded-xl border border-ink/30 space-y-1.5">
+                <div class="flex items-center justify-between gap-1">
+                  <span class="text-[11px] font-extrabold">Hint photo</span>
+                  ${stage.hintPhoto ? `<button type="button" onclick="clearPhoto(${idx}, 'hintPhoto')" class="text-[10px] font-extrabold text-coral underline">Remove</button>` : ""}
+                </div>
+                ${stage.hintPhoto ? `<img src="${stage.hintPhoto}" alt="Hint photo preview" class="w-full h-24 object-cover rounded-lg border border-ink/20" />` : `<div class="h-16 rounded-lg bg-paper flex items-center justify-center text-[10px] font-bold text-ink/50">No photo selected</div>`}
+                <input type="file" accept="image/*" onchange="handlePhotoUpload(event, ${idx}, 'hintPhoto')" class="block w-full text-[10px]" />
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-sky/10 p-3 rounded-xl border border-ink/30 space-y-2.5">
+            <div class="flex items-center justify-between gap-2">
+              <p class="text-[11px] font-extrabold uppercase tracking-wide">📍 GPS Hot &amp; Cold</p>
+              <label class="flex items-center gap-1.5 text-[10px] font-extrabold cursor-pointer">
+                <input id="edit-gps-enabled-${idx}" type="checkbox" ${stage.gpsEnabled ? "checked" : ""} class="w-4 h-4 accent-ink" />
+                Enable GPS
+              </label>
+            </div>
+            <div>
+              <label class="block text-[10px] font-extrabold mb-1">Paste Google Maps coordinates (optional)</label>
+              <div class="flex gap-1.5">
+                <input id="edit-gps-paste-${idx}" type="text" placeholder="53.825889, -1.788028" class="min-w-0 flex-1 px-2 py-2 rounded-lg bg-white ink-input font-mono text-[10px] font-bold" />
+                <button type="button" onclick="pasteStageCoordinates(${idx})" class="ink-btn bg-sunny px-2.5 rounded-lg text-[10px] font-extrabold">Use</button>
+              </div>
+              <p class="text-[9px] font-semibold text-ink/60">Paste the two numbers from Google Maps, or enter them below.</p>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-extrabold mb-1">Latitude</label>
+                <input id="edit-gps-lat-${idx}" type="text" value="${escapeAttr(stage.targetLat)}" placeholder="53.825889" class="w-full px-2 py-2 rounded-lg bg-white ink-input font-mono text-xs font-bold" />
+              </div>
+              <div>
+                <label class="block text-[10px] font-extrabold mb-1">Longitude</label>
+                <input id="edit-gps-lng-${idx}" type="text" value="${escapeAttr(stage.targetLng)}" placeholder="-1.788028" class="w-full px-2 py-2 rounded-lg bg-white ink-input font-mono text-xs font-bold" />
+              </div>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <button type="button" id="use-gps-btn-${idx}" onclick="captureCurrentLocation(${idx})" class="ink-btn bg-white text-ink px-2.5 py-2 rounded-lg text-[10px] font-extrabold border border-ink/30">Use my current location</button>
+              <div class="flex items-center gap-1.5">
+                <label for="edit-gps-radius-${idx}" class="text-[10px] font-extrabold">Unlock within</label>
+                <input id="edit-gps-radius-${idx}" type="number" min="0" max="10000" step="1" value="${Number(stage.hideClueUntilMeters) || 0}" class="w-20 px-2 py-2 rounded-lg bg-white ink-input font-mono text-xs font-bold" />
+                <span class="text-[10px] font-extrabold">metres</span>
+              </div>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              <button type="button" onclick="document.getElementById('edit-gps-radius-${idx}').value=50" class="text-[9px] font-bold border border-ink/30 bg-white px-2 py-1 rounded-lg">50 m</button>
+              <button type="button" onclick="document.getElementById('edit-gps-radius-${idx}').value=10" class="text-[9px] font-bold border border-ink/30 bg-white px-2 py-1 rounded-lg">10 m</button>
+              <button type="button" onclick="document.getElementById('edit-gps-radius-${idx}').value=2" class="text-[9px] font-bold border border-ink/30 bg-white px-2 py-1 rounded-lg">${isFinalStage ? "Final: 2 m" : "2 m"}</button>
+              <button type="button" onclick="document.getElementById('edit-gps-radius-${idx}').value=0" class="text-[9px] font-bold border border-ink/30 bg-white px-2 py-1 rounded-lg">No lock</button>
+            </div>
+            <p class="text-[9px] font-semibold text-ink/60">For the final stage, choose 2 m. Phone GPS accuracy can vary, so test it at the real location.</p>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    function handlePhotoUpload(event, stageIdx, field) {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1000;
+          let { width, height } = img;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+          config.stages[stageIdx][field] = canvas.toDataURL("image/jpeg", 0.82);
+          saveConfigToStorage();
+          populateEditorFields();
+          renderQrPreview();
+          lucide.createIcons();
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function clearPhoto(stageIdx, field) {
+      config.stages[stageIdx][field] = "";
+      saveConfigToStorage();
+      populateEditorFields();
+      renderQrPreview();
+      lucide.createIcons();
+    }
+
+    function pasteStageCoordinates(stageIdx) {
+      const pasteEl = document.getElementById(`edit-gps-paste-${stageIdx}`);
+      const raw = pasteEl ? pasteEl.value.trim() : "";
+      if (!raw) {
+        if (pasteEl) pasteEl.placeholder = "Paste coordinates first";
+        return;
+      }
+      // Accept decimal pairs and Google Maps DMS pairs, including N/S/E/W suffixes.
+      const parts = raw.split(/[,;\\s]+(?=[+-]?\\d|\\d)/).filter(Boolean);
+      let latValue = "";
+      let lngValue = "";
+      const dmsMatches = raw.match(/[-+]?\\d+(?:\\.\\d+)?\\s*°[^,;]*?[NS]/i);
+      if (dmsMatches) {
+        const splitAt = raw.search(/[NS]/i);
+        latValue = raw.slice(0, splitAt + 1).trim();
+        lngValue = raw.slice(splitAt + 1).replace(/^[,;\\s]+/, "").trim();
+      } else {
+        const nums = raw.match(/[+-]?\\d+(?:\\.\\d+)?/g);
+        if (nums && nums.length >= 2) {
+          latValue = nums[0];
+          lngValue = nums[1];
+        }
+      }
+      const lat = parseCoordinate(latValue, "lat");
+      const lng = parseCoordinate(lngValue, "lng");
+      if (lat === null || lng === null) {
+        alert("I couldn't read those coordinates. Paste latitude first, then longitude, separated by a comma.");
+        return;
+      }
+      document.getElementById(`edit-gps-lat-${stageIdx}`).value = lat.toFixed(6);
+      document.getElementById(`edit-gps-lng-${stageIdx}`).value = lng.toFixed(6);
+      document.getElementById(`edit-gps-enabled-${stageIdx}`).checked = true;
+      pasteEl.value = "";
+      pasteEl.placeholder = "Coordinates added ✓";
+    }
+
+    function captureCurrentLocation(stageIdx) {
+      const btn = document.getElementById(`use-gps-btn-${stageIdx}`);
+      if (!navigator.geolocation) {
+        if (btn) btn.textContent = "GPS Unavailable";
+        return;
+      }
+      if (btn) btn.textContent = "Getting GPS...";
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          document.getElementById(`edit-gps-lat-${stageIdx}`).value = pos.coords.latitude.toFixed(6);
+          document.getElementById(`edit-gps-lng-${stageIdx}`).value = pos.coords.longitude.toFixed(6);
+          if (btn) btn.textContent = "Location Set ✓";
+        },
+        () => {
+          if (btn) btn.textContent = "GPS Failed — Try Again";
+        },
+        { enableHighAccuracy: true, maximumAge: 5000, timeout: 12000 }
+      );
+    }
+
+    function saveEditorChanges() {
+      const titleVal = document.getElementById("edit-hunt-title").value.trim();
+      const compVal = document.getElementById("edit-completion-message").value;
+
+      if (titleVal) config.huntTitle = titleVal;
+      config.completionMessage = compVal;
+
+      config.stages.forEach((stage, idx) => {
+        const titleEl = document.getElementById(`edit-stage-title-${idx}`);
+        const answerEl = document.getElementById(`edit-stage-answer-${idx}`);
+        const textEl = document.getElementById(`edit-stage-text-${idx}`);
+        const hintEl = document.getElementById(`edit-stage-hint-${idx}`);
+        const gpsEnEl = document.getElementById(`edit-gps-enabled-${idx}`);
+        const latEl = document.getElementById(`edit-gps-lat-${idx}`);
+        const lngEl = document.getElementById(`edit-gps-lng-${idx}`);
+        const radEl = document.getElementById(`edit-gps-radius-${idx}`);
+
+        if (titleEl && titleEl.value.trim()) stage.title = titleEl.value.trim();
+        if (answerEl && answerEl.value.trim()) stage.answer = answerEl.value.trim().toUpperCase();
+        if (textEl) stage.mainText = textEl.value;
+        if (hintEl) stage.hintText = hintEl.value;
+        if (gpsEnEl) stage.gpsEnabled = gpsEnEl.checked;
+        if (latEl) {
+          const parsedLat = parseCoordinate(latEl.value, "lat");
+          stage.targetLat = parsedLat !== null ? String(parsedLat) : latEl.value.trim();
+        }
+        if (lngEl) {
+          const parsedLng = parseCoordinate(lngEl.value, "lng");
+          stage.targetLng = parsedLng !== null ? String(parsedLng) : lngEl.value.trim();
+        }
+        if (radEl) {
+          stage.hideClueUntilMeters = Math.max(0, Number(radEl.value) || 0);
+        }
+      });
+
+      saveConfigToStorage();
+      renderAll();
+      renderQrPreview();
+      document.getElementById("editor-status-msg").textContent = "Changes applied and saved!";
+    }
+
+    function exportStandaloneHtml() {
+      saveEditorChanges();
+      const serialized = JSON.stringify(config).replace(/<\/script>/gi, "<\\/script>");
+      const embedScript = `<script>window.__EMBEDDED_HUNT_CONFIG__ = ${serialized};<\/script>`;
+      let fullHtml = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      fullHtml = fullHtml.replace("<!--__EMBEDDED_CONFIG__-->", embedScript);
+
+      const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "index.html";
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      document.getElementById("editor-status-msg").textContent = "Downloaded index.html with your photos & settings!";
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function escapeAttr(str) {
+      return escapeHtml(str).replace(/'/g, "&#39;");
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      renderAll();
+    });
+  </script>
+</body>
+</html>
